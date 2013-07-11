@@ -217,13 +217,13 @@ class Sitemap {
 		$this->incCurrentItem();
 		$this->getWriter()->startElement('url');
 		$this->getWriter()->writeElement('loc', $this->getDomain() . $loc);
-		$this->getWriter()->writeElement('priority', $priority);
-		if ($changefreq) {
-			$this->getWriter()->writeElement('changefreq', $changefreq);
-		}
 		if ($lastmod) {
 			$this->getWriter()->writeElement('lastmod', $this->getLastModifiedDate($lastmod));
 		}
+		if ($changefreq) {
+			$this->getWriter()->writeElement('changefreq', $changefreq);
+		}
+		$this->getWriter()->writeElement('priority', $priority);
 		
 		if ($locales) {
 			foreach ($locales as $locale => $path) {
