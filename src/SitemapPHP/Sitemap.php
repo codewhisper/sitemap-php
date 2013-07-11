@@ -27,6 +27,7 @@ class Sitemap {
 	private $filename = 'sitemap';
 	private $current_item = 0;
 	private $current_sitemap = 0;
+	private $attributes = array();
 
 	const EXT = '.xml';
 	const SCHEMA = 'http://www.sitemaps.org/schemas/sitemap/0.9';
@@ -119,6 +120,26 @@ class Sitemap {
 		$this->filename = $filename;
 		return $this;
 	}
+	
+	/**
+	 * Adds or updates an attribute.
+	 * @param string $name
+	 * @param string $value
+	 * @param Sitemap
+	 */
+	public function addAttribute($name, $value) {
+		$this->attributes[$name] = $value;
+		
+		return $this;
+	}
+	
+	/**
+	 * Function returnes all attributes
+	 * @return array
+	 */
+	public function getAttributes() {
+		return $this->attributes;
+	}
 
 	/**
 	 * Returns current item count
@@ -164,7 +185,12 @@ class Sitemap {
 		$this->getWriter()->startDocument('1.0', 'UTF-8');
 		$this->getWriter()->setIndent(true);
 		$this->getWriter()->startElement('urlset');
-		$this->getWriter()->writeAttribute('xmlns', self::SCHEMA);
+		
+		$this->addAttribute('xmlns', self::SCHEMA);
+		
+		foreach ($this->getAttributes() as $name => $value) {
+			$this->getWriter()->writeAttribute($name, $value);
+		}
 	}
 
 	/**
@@ -174,9 +200,13 @@ class Sitemap {
 	 * @param string $priority The priority of this URL relative to other URLs on your site. Valid values range from 0.0 to 1.0.
 	 * @param string $changefreq How frequently the page is likely to change. Valid values are always, hourly, daily, weekly, monthly, yearly and never.
 	 * @param string|int $lastmod The date of last modification of url. Unix timestamp or any English textual datetime description.
+	 * @param array $locales representation of the URL in different locales including the itself, used by Google. E.g. array('de' => http://domain.com/de, 'en' => http://domain.com/en);
+	 * @param array $video video data
 	 * @return Sitemap
+	 * @see http://googlewebmastercentral.blogspot.co.il/2012/05/multilingual-and-multinational-site.html
+	 * @see https://support.google.com/webmasters/answer/80472
 	 */
-	public function addItem($loc, $priority = self::DEFAULT_PRIORITY, $changefreq = NULL, $lastmod = NULL) {
+	public function addItem($loc, $priority = self::DEFAULT_PRIORITY, $changefreq = NULL, $lastmod = NULL, $locales = array(), $video = array()) {
 		if (($this->getCurrentItem() % self::ITEM_PER_SITEMAP) == 0) {
 			if ($this->getWriter() instanceof \XMLWriter) {
 				$this->endSitemap();
@@ -188,10 +218,33 @@ class Sitemap {
 		$this->getWriter()->startElement('url');
 		$this->getWriter()->writeElement('loc', $this->getDomain() . $loc);
 		$this->getWriter()->writeElement('priority', $priority);
-		if ($changefreq)
+		if ($changefreq) {
 			$this->getWriter()->writeElement('changefreq', $changefreq);
-		if ($lastmod)
+		}
+		if ($lastmod) {
 			$this->getWriter()->writeElement('lastmod', $this->getLastModifiedDate($lastmod));
+		}
+		
+		if ($locales) {
+			foreach ($locales as $locale => $path) {
+				$this->getWriter()->startElement('xhtml:link');
+				$this->getWriter()->writeAttribute('rel', 'alternative');
+				$this->getWriter()->writeAttribute('hreflang', $locale);
+				$this->getWriter()->writeAttribute('href', $path);
+				$this->getWriter()->endElement();
+			}
+		}
+		
+		if ($video) {
+			$this->getWriter()->startElement('video:video');
+			
+			foreach ($video as $name => $content) {
+				$this->getWriter()->writeElement('video:' . $name, $content);
+			}
+				
+			$this->getWriter()->endElement();
+		}
+				
 		$this->getWriter()->endElement();
 		return $this;
 	}
