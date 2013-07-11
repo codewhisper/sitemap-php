@@ -1,5 +1,5 @@
 {
-    "name": "evert/sitemap-php",
+    "name": "codewhisper/sitemap-php",
     "type": "library",
     "description": "Lightweight library for generating Google sitemap XML files",
     "keywords": ["Sitemap"],
@@ -13,6 +13,10 @@
         {
             "name": "Evert Pot",
             "email": "evert@rooftopsolutions.nl"
+        },
+        {
+            "name": "Jakob Gehring",
+            "email": "mail@codewhisper.com"
         }
     ],
     "require": {
