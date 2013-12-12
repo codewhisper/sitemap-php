@@ -28,11 +28,13 @@ class Sitemap {
 	private $current_item = 0;
 	private $current_sitemap = 0;
 	private $attributes = array();
+	private $append_file = false;
 
 	const EXT = '.xml';
 	const SCHEMA = 'http://www.sitemaps.org/schemas/sitemap/0.9';
 	const DEFAULT_PRIORITY = 0.5;
 	const ITEM_PER_SITEMAP = 50000;
+	const FLUSH_BUFFER = 100;
 	const SEPERATOR = '-';
 	const INDEX_SUFFIX = 'index';
 
@@ -157,6 +159,24 @@ class Sitemap {
 	private function incCurrentItem() {
 		$this->current_item = $this->current_item + 1;
 	}
+	
+	/**
+	 * Returns if the file should be appended
+	 *
+	 * @return bool
+	 */
+	private function getAppendFile() {
+		return $this->append_file;
+	}
+	
+	/**
+	 * Sets if the file should be appended
+	 *
+	 * @param bool
+	 */
+	private function setAppendFile($state) {
+		$this->append_file = $state;
+	}
 
 	/**
 	 * Returns current sitemap file count
@@ -181,16 +201,35 @@ class Sitemap {
 	 */
 	private function startSitemap() {
 		$this->setWriter(new \XMLWriter());
-		$this->getWriter()->openURI($this->getPath() . $this->getFilename() . self::SEPERATOR . $this->getCurrentSitemap() . self::EXT);
+		$this->getWriter()->openMemory();
 		$this->getWriter()->startDocument('1.0', 'UTF-8');
 		$this->getWriter()->setIndent(true);
 		$this->getWriter()->startElement('urlset');
+		
+		$this->setAppendFile(false);
 		
 		$this->addAttribute('xmlns', self::SCHEMA);
 		
 		foreach ($this->getAttributes() as $name => $value) {
 			$this->getWriter()->writeAttribute($name, $value);
 		}
+	}
+	
+	/**
+	 * Writes the sitemap to the file.
+	 */
+	private function writeSitemap() {
+		$filename = $this->getPath() . $this->getFilename() . self::SEPERATOR . $this->getCurrentSitemap() . self::EXT;
+		
+		$flags = 0;
+		
+		if ($this->getAppendFile()) {
+			$flags = FILE_APPEND;
+		}
+		
+		file_put_contents($filename, $this->getWriter()->flush(true), $flags);
+		
+		$this->setAppendFile(true);
 	}
 
 	/**
@@ -210,20 +249,24 @@ class Sitemap {
 		if (($this->getCurrentItem() % self::ITEM_PER_SITEMAP) == 0) {
 			if ($this->getWriter() instanceof \XMLWriter) {
 				$this->endSitemap();
+				$this->incCurrentSitemap();
 			}
 			$this->startSitemap();
-			$this->incCurrentSitemap();
 		}
+		else if (($this->getCurrentItem() % self::FLUSH_BUFFER) == 0) {
+			$this->writeSitemap();
+		}
+		
 		$this->incCurrentItem();
 		$this->getWriter()->startElement('url');
 		$this->getWriter()->writeElement('loc', $this->getDomain() . $loc);
-		$this->getWriter()->writeElement('priority', $priority);
-		if ($changefreq) {
-			$this->getWriter()->writeElement('changefreq', $changefreq);
-		}
 		if ($lastmod) {
 			$this->getWriter()->writeElement('lastmod', $this->getLastModifiedDate($lastmod));
 		}
+		if ($changefreq) {
+			$this->getWriter()->writeElement('changefreq', $changefreq);
+		}
+		$this->getWriter()->writeElement('priority', $priority);
 		
 		if ($locales) {
 			foreach ($locales as $locale => $path) {
@@ -272,6 +315,7 @@ class Sitemap {
 		if (isset($this->writer)) {
 			$this->getWriter()->endElement();
 			$this->getWriter()->endDocument();
+			$this->writeSitemap();
 		}
 	}
 
