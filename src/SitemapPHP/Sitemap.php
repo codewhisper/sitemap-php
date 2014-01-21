@@ -327,6 +327,8 @@ class Sitemap {
 	 */
 	public function createSitemapIndex($loc, $lastmod = 'Today') {
 		$this->endSitemap();
+		$this->incCurrentSitemap();
+		
 		$indexwriter = new \XMLWriter();
 		$indexwriter->openURI($this->getPath() . $this->getFilename() . self::SEPERATOR . self::INDEX_SUFFIX . self::EXT);
 		$indexwriter->startDocument('1.0', 'UTF-8');
