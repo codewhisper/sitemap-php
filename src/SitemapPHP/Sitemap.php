@@ -200,7 +200,9 @@ class Sitemap {
 	 * 
 	 */
 	private function startSitemap() {
-		$this->setWriter(new \XMLWriter());
+		$writer = new \XMLWriter();
+		
+		$this->setWriter($writer);
 		$this->getWriter()->openMemory();
 		$this->getWriter()->startDocument('1.0', 'UTF-8');
 		$this->getWriter()->setIndent(true);
@@ -255,6 +257,10 @@ class Sitemap {
 		}
 		else if (($this->getCurrentItem() % self::FLUSH_BUFFER) == 0) {
 			$this->writeSitemap();
+		}
+		
+		if (!$this->getWriter() instanceof \XMLWriter) {
+			return;
 		}
 		
 		$this->incCurrentItem();
@@ -312,7 +318,7 @@ class Sitemap {
 	 *
 	 */
 	private function endSitemap() {
-		if (isset($this->writer)) {
+		if ($this->getWriter() instanceof \XMLWriter) {
 			$this->getWriter()->endElement();
 			$this->getWriter()->endDocument();
 			$this->writeSitemap();
