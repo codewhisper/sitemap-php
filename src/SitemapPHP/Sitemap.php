@@ -27,8 +27,7 @@ class Sitemap {
 	private $filename = 'sitemap';
 	private $current_item = 0;
 	private $current_sitemap = 0;
-	private $attributes = array();
-	private $append_file = false;
+	private $attributes = array();	
 
 	const EXT = '.xml';
 	const SCHEMA = 'http://www.sitemaps.org/schemas/sitemap/0.9';
@@ -161,24 +160,6 @@ class Sitemap {
 	}
 	
 	/**
-	 * Returns if the file should be appended
-	 *
-	 * @return bool
-	 */
-	private function getAppendFile() {
-		return $this->append_file;
-	}
-	
-	/**
-	 * Sets if the file should be appended
-	 *
-	 * @param bool
-	 */
-	private function setAppendFile($state) {
-		$this->append_file = $state;
-	}
-
-	/**
 	 * Returns current sitemap file count
 	 *
 	 * @return int
@@ -203,12 +184,15 @@ class Sitemap {
 		$writer = new \XMLWriter();
 		
 		$this->setWriter($writer);
-		$this->getWriter()->openMemory();
+		
+		$filename = $this->getPath() . $this->getFilename() . self::SEPERATOR . $this->getCurrentSitemap() . '.tmp';
+		if (file_exists($filename)) {
+			file_unmanaged_delete($filename);
+		}
+		$this->getWriter()->openUri($filename);
 		$this->getWriter()->startDocument('1.0', 'UTF-8');
 		$this->getWriter()->setIndent(true);
 		$this->getWriter()->startElement('urlset');
-		
-		$this->setAppendFile(false);
 		
 		$this->addAttribute('xmlns', self::SCHEMA);
 		
@@ -221,17 +205,7 @@ class Sitemap {
 	 * Writes the sitemap to the file.
 	 */
 	private function writeSitemap() {
-		$filename = $this->getPath() . $this->getFilename() . self::SEPERATOR . $this->getCurrentSitemap() . self::EXT;
-		
-		$flags = 0;
-		
-		if ($this->getAppendFile()) {
-			$flags = FILE_APPEND;
-		}
-		
-		file_put_contents($filename, $this->getWriter()->flush(true), $flags);
-		
-		$this->setAppendFile(true);
+		$this->getWriter()->flush(true);
 	}
 
 	/**
@@ -259,11 +233,8 @@ class Sitemap {
 			$this->writeSitemap();
 		}
 		
-		if (!$this->getWriter() instanceof \XMLWriter) {
-			return;
-		}
-		
 		$this->incCurrentItem();
+		
 		$this->getWriter()->startElement('url');
 		$this->getWriter()->writeElement('loc', $this->getDomain() . $loc);
 		if ($lastmod) {
@@ -322,6 +293,10 @@ class Sitemap {
 			$this->getWriter()->endElement();
 			$this->getWriter()->endDocument();
 			$this->writeSitemap();
+			
+			$filename = $this->getPath() . $this->getFilename() . self::SEPERATOR . $this->getCurrentSitemap();
+			
+			file_unmanaged_move($filename . '.tmp', $filename . self::EXT, FILE_EXISTS_REPLACE);
 		}
 	}
 
